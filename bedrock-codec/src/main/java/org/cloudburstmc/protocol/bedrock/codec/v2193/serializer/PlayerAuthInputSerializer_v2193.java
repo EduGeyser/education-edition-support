@@ -4,16 +4,17 @@ import io.netty.buffer.ByteBuf;
 import org.cloudburstmc.math.vector.Vector2f;
 import org.cloudburstmc.math.vector.Vector3f;
 import org.cloudburstmc.protocol.bedrock.codec.BedrockCodecHelper;
-import org.cloudburstmc.protocol.bedrock.codec.v944.serializer.PlayerAuthInputSerializer_v944;
+import org.cloudburstmc.protocol.bedrock.codec.v2168.serializer.PlayerAuthInputSerializer_v2168;
 import org.cloudburstmc.protocol.bedrock.data.PlayerActionType;
 import org.cloudburstmc.protocol.bedrock.data.PlayerAuthInputData;
 import org.cloudburstmc.protocol.bedrock.data.PlayerBlockActionData;
+import org.cloudburstmc.protocol.bedrock.data.inventory.HandSlot;
 import org.cloudburstmc.protocol.bedrock.data.inventory.transaction.ItemUseTransaction;
 import org.cloudburstmc.protocol.bedrock.data.inventory.transaction.LegacySetItemSlotData;
 import org.cloudburstmc.protocol.bedrock.packet.PlayerAuthInputPacket;
 import org.cloudburstmc.protocol.common.util.VarInts;
 
-public class PlayerAuthInputSerializer_v2193 extends PlayerAuthInputSerializer_v944 {
+public class PlayerAuthInputSerializer_v2193 extends PlayerAuthInputSerializer_v2168 {
 
     public static final PlayerAuthInputSerializer_v2193 INSTANCE = new PlayerAuthInputSerializer_v2193();
 
@@ -85,11 +86,7 @@ public class PlayerAuthInputSerializer_v2193 extends PlayerAuthInputSerializer_v
         float z = buffer.readFloatLE();
         packet.setRotation(Vector3f.from(x, y, z));
 
-        int count = VarInts.readUnsignedInt(buffer);
-        for (int i = 0; i < count; i++) {
-            int index = VarInts.readInt(buffer);
-            packet.getInputData().add(PlayerAuthInputData.values()[index]);
-        }
+        this.readInputData(buffer, packet);
 
         packet.setInputMode(INPUT_MODES[VarInts.readUnsignedInt(buffer)]);
         packet.setPlayMode(CLIENT_PLAY_MODES[VarInts.readUnsignedInt(buffer)]);
@@ -138,6 +135,7 @@ public class PlayerAuthInputSerializer_v2193 extends PlayerAuthInputSerializer_v
         helper.writeBlockPosition(buffer, transaction.getBlockPosition());
         buffer.writeByte(transaction.getBlockFace());
         VarInts.writeInt(buffer, transaction.getHotbarSlot());
+        buffer.writeByte(transaction.getHand().ordinal()); // new
         helper.writeItem(buffer, transaction.getItemInHand());
         helper.writeVector3f(buffer, transaction.getPlayerPosition());
         helper.writeVector3f(buffer, transaction.getClickPosition());
@@ -171,6 +169,7 @@ public class PlayerAuthInputSerializer_v2193 extends PlayerAuthInputSerializer_v
         itemTransaction.setBlockPosition(helper.readBlockPosition(buffer));
         itemTransaction.setBlockFace(buffer.readUnsignedByte());
         itemTransaction.setHotbarSlot(VarInts.readInt(buffer));
+        itemTransaction.setHand(HandSlot.values()[buffer.readUnsignedByte()]); // new
         itemTransaction.setItemInHand(helper.readItem(buffer));
         itemTransaction.setPlayerPosition(helper.readVector3f(buffer));
         itemTransaction.setClickPosition(helper.readVector3f(buffer));

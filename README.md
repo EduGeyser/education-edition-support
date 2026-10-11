@@ -43,7 +43,7 @@ repositories {
 }
 
 dependencies {
-    implementation("org.cloudburstmc.protocol:bedrock-connection:3.0.0.Beta13-SNAPSHOT")
+    implementation("org.cloudburstmc.protocol:bedrock-connection:3.0.0.Beta14-SNAPSHOT")
 }
 ```
 </details>
@@ -64,7 +64,7 @@ dependencies {
     <dependency>
         <groupId>org.cloudburstmc.protocol</groupId>
         <artifactId>bedrock-connection</artifactId>
-        <version>3.0.0.Beta13-SNAPSHOT</version>
+        <version>3.0.0.Beta14-SNAPSHOT</version>
         <scope>compile</scope>
     </dependency>
 </dependencies>

@@ -9,11 +9,9 @@
 
 A protocol library for Minecraft that supports multiple versions. (Currently Bedrock Edition only)
 
-This fork's `bedrock-connection` module uses NetworkM and requires Java 21.
-The other modules retain their Java 8 target. Netty dependencies use 4.2.17.Final.
-Until NetworkM is published, run `gradlew publishToMavenLocal` in its checkout
-before building this project. The connection module uses NetworkM's
-`dev.sendablemetatype.netty` packages.
+This fork builds with JDK 27 and every module targets Java 25. The
+`bedrock-connection` module uses NetworkM's RakNet transport
+(`io.github.sendablemetatype.netty` on Maven Central).
 
 ### Links
 

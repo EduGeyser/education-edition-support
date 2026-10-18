@@ -1,9 +1,9 @@
 [versions]
-checkerframework = "3.37.0"
-netty = "4.2.17.Final"
-jackson = "2.18.0"
-adventure = "4.26.1"
-junit = "5.9.2"
+checkerframework = "4.3.1"
+netty = "4.2.19.Final"
+jackson = "2.22"
+adventure = "5.2.0"
+junit = "6.1.3"
 
 [libraries]
 checker-qual = { group = "org.checkerframework", name = "checker-qual", version.ref = "checkerframework" }
@@ -18,19 +18,20 @@ fastutil-int-object-maps = { group = "org.cloudburstmc.fastutil.maps", name = "i
 fastutil-object-int-maps = { group = "org.cloudburstmc.fastutil.maps", name = "object-int-maps" }
 
 netty-buffer = { group = "io.netty", name = "netty-buffer", version.ref = "netty" }
-netty-transport-raknet = { group = "io.github.sendablemetatype.netty", name = "netty-transport-raknet", version = "1.1.0" }
+netty-transport-raknet = { group = "io.github.sendablemetatype.netty", name = "netty-transport-raknet", version = "1.2.0" }
 
 jackson-annotations = { group = "com.fasterxml.jackson.core", name = "jackson-annotations", version.ref = "jackson" }
-jose4j = { group = "org.bitbucket.b_c", name = "jose4j", version = "0.9.6" }
+jose4j = { group = "org.bitbucket.b_c", name = "jose4j", version = "0.9.7" }
 natives = { group = "com.nukkitx", name = "natives", version = "1.0.3" }
-math = { group = "org.cloudburstmc.math", name = "immutable", version = "2.0-SNAPSHOT" }
+math = { group = "org.cloudburstmc.math", name = "immutable", version = "2.0" }
 nbt = { group = "org.cloudburstmc", name = "nbt", version = "3.1.0.Final" }
-lmbda = { group = "org.lanternpowered", name = "lmbda", version = "2.0.0" }
+lmbda = { group = "org.lanternpowered", name = "lmbda", version = "3.0.0" }
 
-snappy = { group = "io.airlift", name = "aircompressor", version = "0.27" }
+snappy = { group = "io.airlift", name = "aircompressor-v3", version = "3.11" }
 
 junit = { group = "org.junit.jupiter", name = "junit-jupiter", version.ref = "junit" }
+junit-platform-launcher = { group = "org.junit.platform", name = "junit-platform-launcher" }
 
 [plugins]
-checkerframework = { id = "org.checkerframework", version = "0.6.29" }
-lombok = { id = "io.freefair.lombok", version = "6.6.3" }
+checkerframework = { id = "org.checkerframework", version = "1.0.2" }
+lombok = { id = "io.freefair.lombok", version = "9.8.2" }

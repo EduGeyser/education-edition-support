@@ -30,6 +30,9 @@ subprojects {
             options.encoding = Charsets.UTF_8.name();
             options.compilerArgs.add("-parameters")
         }
+        withType<JavaCompile>().configureEach {
+            options.release.set(25)
+        }
         test {
             useJUnitPlatform()
         }
@@ -37,13 +40,14 @@ subprojects {
 
     dependencies {
         compileOnly(rootProject.libs.checker.qual)
+        testRuntimeOnly(rootProject.libs.junit.platform.launcher)
     }
 
     java {
         withJavadocJar()
         withSourcesJar()
         toolchain {
-            languageVersion.set(JavaLanguageVersion.of(8))
+            languageVersion.set(JavaLanguageVersion.of(27))
         }
     }
 

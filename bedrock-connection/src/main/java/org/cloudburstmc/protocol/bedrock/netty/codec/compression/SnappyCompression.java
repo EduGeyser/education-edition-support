@@ -1,109 +1,68 @@
 package org.cloudburstmc.protocol.bedrock.netty.codec.compression;
 
-import io.airlift.compress.snappy.SnappyRawCompressor;
-import io.airlift.compress.snappy.SnappyRawDecompressor;
+import io.airlift.compress.v3.snappy.SnappyJavaCompressor;
+import io.airlift.compress.v3.snappy.SnappyJavaDecompressor;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.CompositeByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import org.cloudburstmc.protocol.bedrock.data.CompressionAlgorithm;
 import org.cloudburstmc.protocol.bedrock.data.PacketCompressionAlgorithm;
 
+import java.lang.foreign.MemorySegment;
 import java.util.zip.DataFormatException;
-
-import static sun.misc.Unsafe.ARRAY_BYTE_BASE_OFFSET;
 
 public class SnappyCompression implements BatchCompression {
 
     private static final int MAX_DECOMPRESSED_BYTES = Integer.getInteger("bedrock.maxDecompressedBytes", 1024 * 1024 * 10);
 
-    private static final ThreadLocal<short[]> TABLE = ThreadLocal.withInitial(() -> new short[16384]);
+    // Snappy prefixes raw data with its uncompressed length as a varint of at most 5 bytes
+    private static final int MAX_LENGTH_PREFIX_BYTES = 5;
+
+    // The compressor keeps a hash table between calls, so each thread needs its own
+    private static final ThreadLocal<SnappyJavaCompressor> COMPRESSOR = ThreadLocal.withInitial(SnappyJavaCompressor::new);
+    private static final SnappyJavaDecompressor DECOMPRESSOR = new SnappyJavaDecompressor();
 
     @Override
     public ByteBuf encode(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
-        ByteBuf direct;
-        if (!msg.isDirect() || msg instanceof CompositeByteBuf) {
-            direct = ctx.alloc().ioBuffer(msg.readableBytes());
-            direct.writeBytes(msg);
-        } else {
-            direct = msg;
-        }
-
-        ByteBuf output = ctx.alloc().directBuffer();
+        SnappyJavaCompressor compressor = COMPRESSOR.get();
+        ByteBuf output = ctx.alloc().directBuffer(compressor.maxCompressedLength(msg.readableBytes()));
         try {
-            long inputAddress = direct.memoryAddress() + direct.readerIndex();
-            long inputEndAddress = inputAddress + direct.readableBytes();
-
-            output.ensureWritable(SnappyRawCompressor.maxCompressedLength(direct.readableBytes()));
-
-            long outputAddress;
-            long outputEndAddress;
-            byte[] outputArray = null;
-            if (output.isDirect() && output.hasMemoryAddress()) {
-                outputAddress = output.memoryAddress() + output.writerIndex();
-                outputEndAddress = outputAddress + output.writableBytes();
-            } else if (output.hasArray()) {
-                outputArray = output.array();
-                outputAddress = ARRAY_BYTE_BASE_OFFSET + output.arrayOffset() + output.writerIndex();
-                outputEndAddress = ARRAY_BYTE_BASE_OFFSET + output.arrayOffset() + output.writableBytes();
-            } else {
-                throw new IllegalStateException("Unsupported ByteBuf " + output.getClass().getSimpleName());
-            }
-
-            int compressed = SnappyRawCompressor.compress(null, inputAddress, inputEndAddress, outputArray, outputAddress, outputEndAddress, TABLE.get());
+            int compressed = compressor.compress(readableSegment(msg), writableSegment(output));
             output.writerIndex(output.writerIndex() + compressed);
             return output.retain();
         } finally {
             output.release();
-            if (direct != msg) {
-                direct.release();
-            }
         }
     }
 
     @Override
     public ByteBuf decode(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
-        ByteBuf direct;
-        if (!msg.isDirect() || msg instanceof CompositeByteBuf) {
-            direct = ctx.alloc().ioBuffer(msg.readableBytes());
-            direct.writeBytes(msg);
-        } else {
-            direct = msg;
+        byte[] lengthPrefix = new byte[Math.min(MAX_LENGTH_PREFIX_BYTES, msg.readableBytes())];
+        msg.getBytes(msg.readerIndex(), lengthPrefix);
+        int uncompressedLength = DECOMPRESSOR.getUncompressedLength(lengthPrefix, 0);
+        if (uncompressedLength > MAX_DECOMPRESSED_BYTES) {
+            throw new DataFormatException("Inflated data exceeds maximum size");
         }
 
-        ByteBuf output = ctx.alloc().directBuffer();
+        ByteBuf output = ctx.alloc().directBuffer(uncompressedLength);
         try {
-            long inputAddress = direct.memoryAddress() + direct.readerIndex();
-            long inputEndAddress = inputAddress + direct.readableBytes();
-
-            int uncompressedLength = SnappyRawDecompressor.getUncompressedLength(null, inputAddress, inputEndAddress);
-            if (uncompressedLength > MAX_DECOMPRESSED_BYTES) {
-                throw new DataFormatException("Inflated data exceeds maximum size");
-            }
-            output.ensureWritable(uncompressedLength);
-
-            long outputAddress;
-            long outputEndAddress;
-            byte[] outputArray = null;
-            if (output.isDirect() && output.hasMemoryAddress()) {
-                outputAddress = output.memoryAddress() + output.writerIndex();
-                outputEndAddress = outputAddress + output.writableBytes();
-            } else if (output.hasArray()) {
-                outputArray = output.array();
-                outputAddress = ARRAY_BYTE_BASE_OFFSET + output.arrayOffset() + output.writerIndex();
-                outputEndAddress = ARRAY_BYTE_BASE_OFFSET + output.arrayOffset() + output.writableBytes();
-            } else {
-                throw new IllegalStateException("Unsupported ByteBuf " + output.getClass().getSimpleName());
-            }
-
-            int decompressed = SnappyRawDecompressor.decompress(null, inputAddress, inputEndAddress, outputArray, outputAddress, outputEndAddress);
+            int decompressed = DECOMPRESSOR.decompress(readableSegment(msg), writableSegment(output));
             output.writerIndex(output.writerIndex() + decompressed);
             return output.retain();
         } finally {
             output.release();
-            if (direct != msg) {
-                direct.release();
-            }
         }
+    }
+
+    private static MemorySegment readableSegment(ByteBuf buf) {
+        return MemorySegment.ofBuffer(buf.nioBuffer(buf.readerIndex(), buf.readableBytes()));
+    }
+
+    private static MemorySegment writableSegment(ByteBuf buf) {
+        // A single component buffer's NIO view shares its memory, so writes land in buf
+        if (buf.nioBufferCount() != 1) {
+            throw new IllegalStateException("Unsupported ByteBuf " + buf.getClass().getSimpleName());
+        }
+        return MemorySegment.ofBuffer(buf.nioBuffer(buf.writerIndex(), buf.writableBytes()));
     }
 
     @Override

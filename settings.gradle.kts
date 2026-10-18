@@ -10,8 +10,11 @@ dependencyResolutionManagement {
     repositories {
         mavenLocal()
         mavenCentral()
-        // JitPack serves mavenCentral() from a mirror that can lag new releases by hours
-        maven("https://repo1.maven.org/maven2")
+        // JitPack serves every Maven Central address from a mirror that can lag new releases
+        // by a day. PaperMC's repository proxies Central without that lag.
+        maven("https://repo.papermc.io/repository/maven-public") {
+            content { includeGroup("io.github.sendablemetatype.netty") }
+        }
         maven("https://repo.opencollab.dev/maven-releases")
         maven("https://repo.opencollab.dev/maven-snapshots")
     }
